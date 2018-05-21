@@ -5,17 +5,17 @@ import unidecode
 import re
 from elasticsearch import Elasticsearch
 
-'''
-ELASTIC_API_URL_HOST = 'https://afc5fca8fdb8f14823e1a1711cbfb1d9.us-east-1.aws.found.io'
-ELASTIC_API_URL_PORT = '9243'
-ELASTIC_API_USERNAME = 'elastic'
-ELASTIC_API_PASSWORD = '9ySJrZ8VWO0GyPHfkYfhEBU2'
+
+ELASTIC_API_URL_HOST = os.environ['ELASTIC_API_URL_HOST']
+ELASTIC_API_URL_PORT = os.environ['ELASTIC_API_URL_PORT']
+ELASTIC_API_USERNAME = os.environ['ELASTIC_API_USERNAME']
+ELASTIC_API_PASSWORD = os.environ['ELASTIC_API_PASSWORD']
 
 es=Elasticsearch(host=ELASTIC_API_URL_HOST,
                  scheme='https',
                  port=ELASTIC_API_URL_PORT,
                  http_auth=(ELASTIC_API_USERNAME,ELASTIC_API_PASSWORD))
-'''
+
 
 cleanString = lambda x: '' if x is None else unidecode.unidecode(re.sub(r'\s+',' ',x))
 listActorsUrl = []
@@ -30,6 +30,7 @@ class ImdbscrapSpider(scrapy.Spider):
 
     def parse(self, response):
 
+        c = 0
         for row in response.css("table.cast_list>tr"):
             article_url = row.css('td.itemprop>a::attr(href)').extract_first()
             idActor = ""
@@ -37,7 +38,10 @@ class ImdbscrapSpider(scrapy.Spider):
                 idActor = cleanString(row.css('td.itemprop>a::attr(href)').extract_first().split('/')[2])
                 listActorsUrl.append("https://www.imdb.com/name/" + idActor)
 
-                yield {
+                es.index(index='imdb',
+                         doc_type='movies',
+                         id=uiid.uiid4(),
+                         body={
                     'movie_id': cleanString(response.url.split('/')[4]),
                     "movie_name": cleanString(response.css('h3>a::text').extract_first()),
                     "movie_year": cleanString(
@@ -45,7 +49,7 @@ class ImdbscrapSpider(scrapy.Spider):
                     'actor_name': cleanString(row.css('span.itemprop::text').extract_first()),
                     "actor_id": cleanString(row.css('td.itemprop>a::attr(href)').extract_first().split('/')[2]),
                     "role_name": cleanString(row.css('td.character>a::text').extract_first())
-                }
+                })
             except:
                 print("")
 
@@ -70,7 +74,10 @@ class ImdbscrapSpider(scrapy.Spider):
                 idActor = cleanString(row.css('td.itemprop>a::attr(href)').extract_first().split('/')[2])
                 listActorsUrl.append("https://www.imdb.com/name/" + idActor)
 
-                yield {
+                es.index(index='imdb',
+                         doc_type='movies',
+                         id=uiid.uiid4(),
+                         body={
                     'movie_id': cleanString(response.url.split('/')[4]),
                     "movie_name": cleanString(response.css('h3>a::text').extract_first()),
                     "movie_year": cleanString(
@@ -78,7 +85,7 @@ class ImdbscrapSpider(scrapy.Spider):
                     'actor_name': cleanString(row.css('span.itemprop::text').extract_first()),
                     "actor_id": cleanString(row.css('td.itemprop>a::attr(href)').extract_first().split('/')[2]),
                     "role_name": cleanString(row.css('td.character>a::text').extract_first())
-                }
+                })
             except:
                 print("")
 
