@@ -23,8 +23,12 @@ class NytimesSpider(scrapy.Spider):
             }
 
             next_page = article_url
+            print(next_page)
+
             if next_page is not None:
                 yield response.follow(next_page, callback=self.parse_article)
+
+
 
     def parse_article(self, response):
         print("????????")

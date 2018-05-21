@@ -1,26 +1,80 @@
+import os
+
 import scrapy
 import unidecode
 import re
+from elasticsearch import Elasticsearch
+
+'''
+ELASTIC_API_URL_HOST = 'https://afc5fca8fdb8f14823e1a1711cbfb1d9.us-east-1.aws.found.io'
+ELASTIC_API_URL_PORT = '9243'
+ELASTIC_API_USERNAME = 'elastic'
+ELASTIC_API_PASSWORD = '9ySJrZ8VWO0GyPHfkYfhEBU2'
+
+es=Elasticsearch(host=ELASTIC_API_URL_HOST,
+                 scheme='https',
+                 port=ELASTIC_API_URL_PORT,
+                 http_auth=(ELASTIC_API_USERNAME,ELASTIC_API_PASSWORD))
+'''
 
 cleanString = lambda x: '' if x is None else unidecode.unidecode(re.sub(r'\s+',' ',x))
+listActorsUrl = []
+listofmovies = []
 
 
 class ImdbscrapSpider(scrapy.Spider):
     name = 'imdbscrap'
-    '''allowed_domains = ['https://www.imdb.com/title/tt0096463/fullcredits/']'''
-    allowed_domains = ['https://www.imdb.com/title/', 'https://www.imdb.com/name/']
+    allowed_domains = ['www.imdb.com']
     start_urls = ['https://www.imdb.com/title/tt0076138/fullcredits/']
 
+
     def parse(self, response):
+
         for row in response.css("table.cast_list>tr"):
             article_url = row.css('td.itemprop>a::attr(href)').extract_first()
-
-
+            idActor = ""
             try:
+                idActor = cleanString(row.css('td.itemprop>a::attr(href)').extract_first().split('/')[2])
+                listActorsUrl.append("https://www.imdb.com/name/" + idActor)
+
                 yield {
                     'movie_id': cleanString(response.url.split('/')[4]),
                     "movie_name": cleanString(response.css('h3>a::text').extract_first()),
-                    "movie_year": cleanString(response.css('span.nobr::text').extract_first().split('(')[1].split(')')[0]),
+                    "movie_year": cleanString(
+                        response.css('span.nobr::text').extract_first().split('(')[1].split(')')[0]),
+                    'actor_name': cleanString(row.css('span.itemprop::text').extract_first()),
+                    "actor_id": cleanString(row.css('td.itemprop>a::attr(href)').extract_first().split('/')[2]),
+                    "role_name": cleanString(row.css('td.character>a::text').extract_first())
+                }
+            except:
+                print("")
+
+
+        for actor in listActorsUrl:
+            yield response.follow(actor, callback=self.get_movies)
+
+
+
+
+
+
+
+
+
+    def parse_movie(self, response):
+        print("parsemovie")
+        for row in response.css("table.cast_list>tr"):
+            article_url = row.css('td.itemprop>a::attr(href)').extract_first()
+            idActor = ""
+            try:
+                idActor = cleanString(row.css('td.itemprop>a::attr(href)').extract_first().split('/')[2])
+                listActorsUrl.append("https://www.imdb.com/name/" + idActor)
+
+                yield {
+                    'movie_id': cleanString(response.url.split('/')[4]),
+                    "movie_name": cleanString(response.css('h3>a::text').extract_first()),
+                    "movie_year": cleanString(
+                        response.css('span.nobr::text').extract_first().split('(')[1].split(')')[0]),
                     'actor_name': cleanString(row.css('span.itemprop::text').extract_first()),
                     "actor_id": cleanString(row.css('td.itemprop>a::attr(href)').extract_first().split('/')[2]),
                     "role_name": cleanString(row.css('td.character>a::text').extract_first())
@@ -30,20 +84,16 @@ class ImdbscrapSpider(scrapy.Spider):
 
 
 
-            next_page = article_url
-            if next_page is not None:
-                yield response.follow(next_page, callback=self.parse_article)
 
 
-    def parse_article(self, response):
-        print("ejnfopwefwepfnn'fb2fp32b9f")
-        yield {
-             'movie_id': cleanString(cleanString(response.url.split('/')[4])),
-                "movie_name": cleanString(response.css('h3>a::text').extract_first()),
-                "movie_year": cleanString(response.css('span.nobr::text').extract_first().split('(')[1].split(')')[0]),
-                'actor_name': cleanString(response.css('span.itemprop::text').extract_first()),
-                "actor_id": cleanString(response.css('td.itemprop>a::attr(href)').extract_first().split('/')[2]),
-                "role_name": cleanString(response.css('td.character>a::text').extract_first())
-        }
+    def get_movies(self, response):
+        print("getmovie")
 
+        for row in response.css("div.filmo-category-section a::attr(href)").extract():
+            if "pro.imdb" not in row:
+                listofmovies.append("https://www.imdb.com" + row)
+
+
+        for movie in listofmovies:
+            yield response.follow(movie, callback=self.parse_movie)
 
