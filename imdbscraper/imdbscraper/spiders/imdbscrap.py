@@ -17,7 +17,6 @@ es=Elasticsearch(host=ELASTIC_API_URL_HOST,
                  scheme='https',
                  port=ELASTIC_API_URL_PORT,
                  http_auth=(ELASTIC_API_USERNAME,ELASTIC_API_PASSWORD))
-es.indices.delete(index='actors', ignore=[400, 404])
 
 
 
