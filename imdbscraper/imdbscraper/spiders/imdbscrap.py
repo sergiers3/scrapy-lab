@@ -1,4 +1,5 @@
 import os
+import uuid
 
 import scrapy
 import unidecode
@@ -11,10 +12,13 @@ ELASTIC_API_URL_PORT = os.environ['ELASTIC_API_URL_PORT']
 ELASTIC_API_USERNAME = os.environ['ELASTIC_API_USERNAME']
 ELASTIC_API_PASSWORD = os.environ['ELASTIC_API_PASSWORD']
 
+
 es=Elasticsearch(host=ELASTIC_API_URL_HOST,
                  scheme='https',
                  port=ELASTIC_API_URL_PORT,
                  http_auth=(ELASTIC_API_USERNAME,ELASTIC_API_PASSWORD))
+es.indices.delete(index='actors', ignore=[400, 404])
+
 
 
 cleanString = lambda x: '' if x is None else unidecode.unidecode(re.sub(r'\s+',' ',x))
@@ -38,9 +42,9 @@ class ImdbscrapSpider(scrapy.Spider):
                 idActor = cleanString(row.css('td.itemprop>a::attr(href)').extract_first().split('/')[2])
                 listActorsUrl.append("https://www.imdb.com/name/" + idActor)
 
-                es.index(index='imdb',
-                         doc_type='movies',
-                         id=uiid.uiid4(),
+                es.index(index='actors',
+                         doc_type='actors info',
+                         id=uuid.uuid4(),
                          body={
                     'movie_id': cleanString(response.url.split('/')[4]),
                     "movie_name": cleanString(response.css('h3>a::text').extract_first()),
@@ -76,7 +80,7 @@ class ImdbscrapSpider(scrapy.Spider):
 
                 es.index(index='imdb',
                          doc_type='movies',
-                         id=uiid.uiid4(),
+                         id=uuid.uuid4(),
                          body={
                     'movie_id': cleanString(response.url.split('/')[4]),
                     "movie_name": cleanString(response.css('h3>a::text').extract_first()),
